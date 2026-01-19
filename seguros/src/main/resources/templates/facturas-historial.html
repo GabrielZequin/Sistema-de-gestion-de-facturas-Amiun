@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="https://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Historial de factura</title>
+
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+
+    <style>
+        :root{
+            --bg:#f6f7fb;
+            --surface:#fff;
+            --text:#0f172a;
+            --muted:#64748b;
+            --border:#e6eaf2;
+            --brand:#0f172a;
+            --shadow:0 10px 30px rgba(0,0,0,.08);
+            --radius:16px;
+            --radius-sm:12px;
+        }
+
+        body{ background:var(--bg) !important; color:var(--text); }
+
+        .page-wrap{ padding-bottom: 24px; }
+        .page-title{ font-weight:700; letter-spacing:-.02em; }
+        .page-subtitle{ color:var(--muted); font-size:13px; }
+
+        .card-soft{
+            border:0;
+            border-radius:var(--radius);
+            background:var(--surface);
+            box-shadow:var(--shadow);
+        }
+        .card-head{
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            gap:12px;
+            padding:14px 16px;
+            border-bottom:1px solid var(--border);
+        }
+        .card-hint{ font-size:12px; color:var(--muted); }
+
+        .btn{ border-radius:var(--radius-sm); }
+        .btn-sm{ padding:.2rem .55rem; font-size:12px; }
+
+        .table-modern{
+            border-color: var(--border);
+        }
+        .table-modern thead th{
+            background: var(--brand);
+            color: #fff;
+            border-color: rgba(255,255,255,.08);
+            white-space: nowrap;
+        }
+        .table-modern td, .table-modern th{ vertical-align: middle; }
+
+        .k{
+            font-size: 12px;
+            color: var(--muted);
+            margin-bottom: 2px;
+        }
+        .v{
+            font-weight: 600;
+            color: var(--text);
+        }
+        .mono{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+    </style>
+</head>
+
+<body>
+
+<div th:replace="fragments/navbar :: navbar"></div>
+
+<div class="container page-wrap">
+
+    <!-- Encabezado -->
+    <div class="d-flex flex-wrap align-items-end justify-content-between gap-2 mb-3">
+        <div>
+            <div class="h4 page-title mb-0">Historial de factura</div>
+            <div class="page-subtitle">
+                Detalle y movimientos registrados
+            </div>
+        </div>
+
+        <a th:href="@{/facturas}" class="btn btn-outline-dark btn-sm">
+            ← Volver al listado
+        </a>
+    </div>
+
+    <!-- Datos de factura -->
+    <div class="card card-soft mb-3">
+        <div class="card-head">
+            <div>
+                <div class="fw-semibold">
+                    Factura # <span th:text="${factura.id}">ID</span>
+                </div>
+                <div class="card-hint">
+                    Estado actual:
+                    <span class="ms-1" th:switch="${factura.estado}">
+                        <span class="badge bg-secondary"
+                              th:case="${T(com.agencia.seguros.model.EstadoFactura).NUEVA}"
+                              th:text="${factura.estado}"></span>
+
+                        <span class="badge bg-warning text-dark"
+                              th:case="${T(com.agencia.seguros.model.EstadoFactura).PENDIENTE_ASIGNACION}"
+                              th:text="${factura.estado}"></span>
+
+                        <span class="badge bg-info text-dark"
+                              th:case="${T(com.agencia.seguros.model.EstadoFactura).ENVIADA_A_SEGURO}"
+                              th:text="${factura.estado}"></span>
+
+                        <span class="badge bg-danger"
+                              th:case="${T(com.agencia.seguros.model.EstadoFactura).CERRADA_MANUALMENTE}"
+                              th:text="${factura.estado}"></span>
+
+                        <span class="badge bg-secondary"
+                              th:case="*"
+                              th:text="${factura.estado}"></span>
+                    </span>
+                </div>
+            </div>
+
+            <div class="card-hint">
+                Registros: <b th:text="${#lists.size(historial)}">0</b>
+            </div>
+        </div>
+
+        <div class="card-body">
+            <div class="row g-3">
+
+                <div class="col-md-6">
+                    <div class="k">Asunto</div>
+                    <div class="v" th:text="${factura.asunto}">Asunto</div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="k">Remitente</div>
+                    <div class="v mono" th:text="${factura.remitente}">correo@ejemplo.com</div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="k">Aseguradora</div>
+                    <div class="v"
+                         th:text="${factura.aseguradora != null ? factura.aseguradora.nombre : 'Sin asignar'}">
+                        Sin asignar
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="k">Fecha recepción</div>
+                    <div class="v"
+                         th:text="${#temporals.format(factura.fechaRecepcion, 'dd/MM/yyyy HH:mm')}">
+                        01/01/2025 10:00
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="k">Archivo</div>
+                    <div class="v">
+                        <a th:if="${factura.nombreArchivo != null}"
+                           th:href="@{'/archivos/' + ${factura.nombreArchivo}}"
+                           target="_blank"
+                           class="btn btn-sm btn-outline-primary">
+                            📄 Ver PDF
+                        </a>
+                        <span th:if="${factura.nombreArchivo == null}" class="text-muted">Sin archivo</span>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Historial -->
+    <div class="card card-soft">
+        <div class="card-head">
+            <div class="fw-semibold">Historial de movimientos</div>
+            <div class="card-hint">Ordenado por fecha</div>
+        </div>
+
+        <div class="card-body p-0">
+            <div th:if="${#lists.isEmpty(historial)}" class="text-center text-muted py-4">
+                No hay movimientos registrados para esta factura.
+            </div>
+
+            <div class="table-responsive" th:if="${!#lists.isEmpty(historial)}">
+                <table class="table table-modern table-hover align-middle mb-0">
+                    <thead>
+                    <tr>
+                        <th>Fecha / Hora</th>
+                        <th>Tipo</th>
+                        <th>Detalle</th>
+                        <th>Estado anterior</th>
+                        <th>Estado nuevo</th>
+                        <th>Usuario</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="mov : ${historial}">
+                        <td class="mono"
+                            th:text="${#temporals.format(mov.fechaMovimiento, 'dd/MM/yyyy HH:mm')}">
+                            01/01/2025 11:00
+                        </td>
+
+                        <td>
+                            <span class="badge bg-info text-dark" th:text="${mov.tipo}">
+                                CAMBIO_ESTADO
+                            </span>
+                        </td>
+
+                        <td th:text="${mov.detalle}">Detalle del movimiento</td>
+
+                        <td class="mono"
+                            th:text="${mov.estadoAnterior != null ? mov.estadoAnterior.name() : '-'}">
+                            -
+                        </td>
+
+                        <!-- ✅ CORREGIDO: estado nuevo -->
+                        <td class="mono"
+                            th:text="${mov.estadoNuevo != null ? mov.estadoNuevo.name() : '-'}">
+                            -
+                        </td>
+
+                        <!-- ✅ Usuario -->
+                        <td th:text="${mov.usuario != null ? mov.usuario : 'sistema'}">
+                            sistema
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+
+        </div>
+    </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

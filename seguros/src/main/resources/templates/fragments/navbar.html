@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="es"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="https://www.thymeleaf.org/extras/spring-security">
+<body>
+
+<nav th:fragment="navbar" class="navbar py-2 mb-3"
+     style="
+       background: rgba(17,24,39,.92);
+       backdrop-filter: blur(8px);
+       border-bottom: 1px solid rgba(255,255,255,.08);
+     ">
+
+    <div class="container-fluid d-flex justify-content-between align-items-center">
+
+        <!-- LOGO + TITULO -->
+        <a class="navbar-brand d-flex align-items-center gap-2 mb-0 text-white"
+           th:href="@{/facturas}" style="font-weight:600; letter-spacing:.2px;">
+
+            <img th:src="@{/img/toyota.png}"
+                 alt="Toyota"
+                 style="height:22px; width:auto;">
+
+            <span style="font-size:14px;">
+                Atención de Siniestros Amiun S.A.
+            </span>
+        </a>
+
+        <!-- MENÚ DERECHO -->
+        <div class="d-flex align-items-center gap-2 flex-wrap justify-content-end">
+
+            <span class="text-white-50 small">
+                Usuario:
+                <span class="text-white fw-semibold"
+                      th:text="${usuarioActual != null ? usuarioActual.username : ''}"></span>
+
+                <span th:if="${usuarioActual != null}">
+                    <span class="mx-1">•</span>
+                    <span class="text-white-50" th:text="${usuarioActual.rol}"></span>
+
+                    <span th:if="${usuarioActual.sucursal != null}">
+                        <span class="mx-1">•</span>
+                        <span class="text-white-50" th:text="${usuarioActual.sucursal}"></span>
+                    </span>
+                </span>
+            </span>
+
+            <a class="btn btn-outline-light btn-sm"
+               sec:authorize="hasRole('ADMIN')"
+               th:href="@{/reportes}">
+                Reportes
+            </a>
+
+            <a class="btn btn-outline-light btn-sm"
+               th:href="@{/facturas}">
+                Facturas
+            </a>
+
+            <a class="btn btn-outline-light btn-sm"
+               th:href="@{/mi-cuenta}">
+                Mi cuenta
+            </a>
+
+            <a class="btn btn-outline-light btn-sm"
+               sec:authorize="hasRole('ADMIN')"
+               th:href="@{/usuarios}">
+                Usuarios
+            </a>
+
+            <form th:action="@{/logout}" method="post" class="mb-0">
+                <button class="btn btn-danger btn-sm">Salir</button>
+            </form>
+
+        </div>
+    </div>
+</nav>
+
+</body>
+</html>

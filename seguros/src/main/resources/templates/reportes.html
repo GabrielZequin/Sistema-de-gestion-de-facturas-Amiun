@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="es"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="https://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Reportes</title>
+
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+    <style>
+        :root{
+            --bg:#f6f7fb;
+            --surface:#fff;
+            --text:#0f172a;
+            --muted:#64748b;
+            --border:#e6eaf2;
+            --brand:#0f172a;
+            --shadow:0 10px 30px rgba(0,0,0,.08);
+            --radius:16px;
+            --radius-sm:12px;
+        }
+
+        body{ background:var(--bg) !important; color:var(--text); }
+
+        .page-wrap{ padding-bottom: 24px; }
+        .page-title{ font-weight:700; letter-spacing:-.02em; }
+        .page-subtitle{ color:var(--muted); font-size:13px; }
+
+        .card-soft{
+            border:0;
+            border-radius:var(--radius);
+            background:var(--surface);
+            box-shadow:var(--shadow);
+        }
+        .card-head{
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            gap:12px;
+            padding:14px 16px;
+            border-bottom:1px solid var(--border);
+        }
+        .card-hint{ font-size:12px; color:var(--muted); }
+
+        .form-label{ font-size:12.5px; margin-bottom:.25rem; color:#334155; }
+        .form-control,.form-select{ border-radius:var(--radius-sm); }
+        .btn{ border-radius:var(--radius-sm); }
+        .btn-primary{ font-weight:600; }
+
+        /* Filtros compactos */
+        .filters .form-control,
+        .filters .form-select{
+            height: 38px;
+            padding: .35rem .6rem;
+            font-size: 13px;
+        }
+        .filters .btn{
+            height: 38px;
+            font-size: 13px;
+        }
+
+        /* Canvas: evita que quede gigante */
+        .chart-wrap{
+            padding: 10px 16px 14px 16px;
+        }
+        .chart-title{
+            font-weight:700;
+            margin: 0;
+        }
+        .chart-subtitle{
+            font-size:12px;
+            color: var(--muted);
+            margin: 0;
+        }
+    </style>
+</head>
+
+<body class="bg-light">
+
+<div th:replace="fragments/navbar :: navbar"></div>
+
+<div class="container page-wrap">
+
+    <!-- Encabezado -->
+    <div class="d-flex flex-wrap align-items-end justify-content-between gap-2 mb-3">
+        <div>
+            <div class="h4 page-title mb-0">Reportes</div>
+            <div class="page-subtitle">Visualizá la cantidad de facturas por período</div>
+        </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="card card-soft mb-3">
+        <div class="card-head">
+            <div class="card-hint">Filtros</div>
+            <div class="card-hint">
+                Agrupación actual: <b th:text="${agrupacion}">DIA</b>
+            </div>
+        </div>
+
+        <div class="card-body filters">
+            <form class="row g-2 align-items-end" method="get" th:action="@{/reportes}">
+
+                <div class="col-md-3">
+                    <label class="form-label">Agrupar por</label>
+                    <select class="form-select" name="agrupacion">
+                        <option value="DIA" th:selected="${agrupacion == 'DIA'}">Día</option>
+                        <option value="SEMANA" th:selected="${agrupacion == 'SEMANA'}">Semana</option>
+                        <option value="MES" th:selected="${agrupacion == 'MES'}">Mes</option>
+                    </select>
+                </div>
+
+                <div class="col-md-3">
+                    <label class="form-label">Desde</label>
+                    <input type="date" class="form-control" name="desde" th:value="${desde}">
+                </div>
+
+                <div class="col-md-3">
+                    <label class="form-label">Hasta</label>
+                    <input type="date" class="form-control" name="hasta" th:value="${hasta}">
+                </div>
+
+                <div class="col-md-3">
+                    <button class="btn btn-primary w-100" type="submit">Aplicar</button>
+                </div>
+
+            </form>
+        </div>
+    </div>
+
+    <!-- Gráfico -->
+    <div class="card card-soft">
+        <div class="card-head">
+            <div>
+                <p class="chart-title">Cantidad de facturas</p>
+                <p class="chart-subtitle">
+                    Agrupado por <b><span th:text="${agrupacion}"></span></b>
+                </p>
+            </div>
+
+            <div class="card-hint" th:if="${labels != null}">
+                Puntos: <b th:text="${#lists.size(labels)}">0</b>
+            </div>
+        </div>
+
+        <div class="chart-wrap">
+            <canvas id="lineChart" height="95"></canvas>
+        </div>
+    </div>
+
+</div>
+
+<script th:inline="javascript">
+    const labels = [[${labels}]];
+    const values = [[${values}]];
+
+    const ctx = document.getElementById('lineChart');
+
+    // Si no hay datos, evitamos errores
+    const hasData = Array.isArray(labels) && labels.length > 0;
+
+    if (hasData) {
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Facturas',
+                    data: values,
+                    tension: 0.25,
+                    fill: false,
+                    pointRadius: 3,
+                    pointHoverRadius: 5,
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: { display: true },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false
+                    }
+                },
+                interaction: {
+                    mode: 'index',
+                    intersect: false
+                },
+                scales: {
+                    x: {
+                        grid: { color: 'rgba(0,0,0,0.06)' },
+                        ticks: { maxRotation: 0 }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: 'rgba(0,0,0,0.06)' }
+                    }
+                }
+            }
+        });
+    } else {
+        // Mensaje simple si no hay datos
+        const parent = ctx.parentElement;
+        parent.innerHTML = '<div class="text-center text-muted py-4">No hay datos para el rango seleccionado.</div>';
+    }
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

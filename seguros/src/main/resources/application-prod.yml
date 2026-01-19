@@ -1,0 +1,42 @@
+spring:
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USER}
+    password: ${DB_PASS}
+
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USER:}
+    password: ${MAIL_PASSWORD:}
+    protocol: smtp
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+
+app:
+  facturas:
+    ruta-archivos: ${RUTA_ARCHIVOS:/opt/seguros/archivos}
+  correo:
+    remitente-email: ${REMITENTE_EMAIL:aperez@amiun.com.ar}
+    asunto-contiene: ${ASUNTO_CONTIENE:"Has recibido un nuevo comprobante"}
+    buscar-ultimos: ${BUSCAR_ULTIMOS:50}
+  mail:
+    enabled: ${APP_MAIL_ENABLED:true}   # para habilitar/inhabilitar lectura IMAP
+
+correo:
+  imap:
+    host: ${CORREO_IMAP_HOST}
+    port: ${CORREO_IMAP_PORT:993}
+    username: ${CORREO_IMAP_USERNAME}
+    password: ${CORREO_IMAP_PASSWORD}
+    folder: ${CORREO_IMAP_FOLDER:INBOX}

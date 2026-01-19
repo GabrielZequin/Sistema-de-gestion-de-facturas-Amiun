@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="https://www.thymeleaf.org/extras/spring-security">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Panel de facturas - Seguros</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+
+    <!-- Tipografía moderna -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <style>
+        :root { --radius: 14px; }
+
+        body { font-family: Inter, system-ui, sans-serif; }
+        body.compact-ui { font-size: 13px; }
+
+        .card {
+            border-radius: var(--radius);
+            border: 1px solid rgba(0,0,0,.06);
+        }
+
+        .table-wrap {
+            border: 1px solid rgba(0,0,0,.08);
+            border-radius: var(--radius);
+            overflow: hidden;
+            background: #fff;
+        }
+
+        .table-scroll {
+            max-height: 65vh;
+            overflow: auto;
+        }
+
+        .table thead th {
+            position: sticky;
+            top: 0;
+            background: #111827;
+            color: #fff;
+            font-weight: 600;
+        }
+
+        .table-hover tbody tr:hover {
+            background: rgba(13,110,253,.06);
+        }
+
+        .badge { border-radius: 999px; font-size: 11px; }
+        .badge-nueva { background:#dbeafe; color:#1e40af; }
+        .badge-pendiente { background:#fef3c7; color:#92400e; }
+        .badge-cerrada { background:#dcfce7; color:#166534; }
+
+        td.observaciones-cell { min-width: 260px; }
+        .acciones-col { width:180px; text-align:center; }
+
+        /* Col Aseguradora un poco más ancha para el select */
+        .aseguradora-col { min-width: 240px; }
+    </style>
+</head>
+
+<body class="bg-light compact-ui">
+
+<!-- NAVBAR -->
+<div th:replace="fragments/navbar :: navbar"></div>
+
+<div class="container-fluid">
+
+    <!-- MENSAJES -->
+    <div th:if="${mensaje}" class="alert alert-success py-2">
+        <span th:text="${mensaje}"></span>
+    </div>
+
+    <div th:if="${error}" class="alert alert-danger py-2">
+        <span th:text="${error}"></span>
+    </div>
+
+    <!-- FILTROS -->
+    <div class="card shadow-sm mb-3">
+        <div class="card-body p-3">
+            <form class="row g-2 align-items-end" method="get" th:action="@{/facturas}">
+
+                <div class="col-md-3">
+                    <label class="form-label">Estado</label>
+                    <select class="form-select form-select-sm" name="estado">
+                        <option value="">Todos</option>
+                        <option th:each="est : ${estados}"
+                                th:value="${est}"
+                                th:text="${est}"
+                                th:selected="${estadoSeleccionado == est}">
+                        </option>
+                    </select>
+                </div>
+
+                <div class="col-md-3">
+                    <label class="form-label">Aseguradora</label>
+                    <select class="form-select form-select-sm" name="aseguradoraId">
+                        <option value="">Todas</option>
+                        <option th:each="aseg : ${aseguradoras}"
+                                th:value="${aseg.id}"
+                                th:text="${aseg.nombre}"
+                                th:selected="${aseguradoraSeleccionada == aseg.id}">
+                        </option>
+                    </select>
+                </div>
+
+                <div class="col-md-2">
+                    <label class="form-label">N° Factura</label>
+                    <input class="form-control form-control-sm" name="numeroFactura"
+                           th:value="${numeroFactura}">
+                </div>
+
+                <div class="col-md-2">
+                    <label class="form-label">N° Siniestro</label>
+                    <input class="form-control form-control-sm" name="numeroSiniestro"
+                           th:value="${numeroSiniestro}">
+                </div>
+
+                <div class="col-md-2">
+                    <label class="form-label">N° Orden</label>
+                    <input class="form-control form-control-sm" name="numeroOrden"
+                           th:value="${numeroOrden}">
+                </div>
+
+                <div class="col-md-3" sec:authorize="hasRole('ADMIN')">
+                    <div class="form-check mt-1">
+                        <input class="form-check-input" type="checkbox"
+                               name="soloVencidas" th:checked="${soloVencidas}">
+                        <label class="form-check-label">
+                            Solo vencidas (+15 días)
+                        </label>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <button class="btn btn-primary btn-sm w-100">Filtrar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- CONTADOR + SIZE -->
+    <div class="d-flex justify-content-between align-items-center px-2 pb-2"
+         th:if="${facturasPage != null}">
+
+        <div class="small text-muted">
+            <span th:if="${facturasPage.totalElements > 0}"
+                  th:text="'Mostrando ' +
+                   (${facturasPage.number} * ${facturasPage.size} + 1) +
+                   '–' +
+                   (${facturasPage.number} * ${facturasPage.size} + ${facturasPage.numberOfElements}) +
+                   ' de ' + ${facturasPage.totalElements} + ' resultados'">
+            </span>
+            <span th:if="${facturasPage.totalElements == 0}">
+                Sin resultados
+            </span>
+        </div>
+
+        <form method="get" th:action="@{/facturas}" class="d-flex align-items-center gap-2">
+            <input type="hidden" name="estado" th:value="${estadoSeleccionado}">
+            <input type="hidden" name="aseguradoraId" th:value="${aseguradoraSeleccionada}">
+            <input type="hidden" name="soloVencidas" th:value="${soloVencidas}">
+            <input type="hidden" name="numeroFactura" th:value="${numeroFactura}">
+            <input type="hidden" name="numeroSiniestro" th:value="${numeroSiniestro}">
+            <input type="hidden" name="numeroOrden" th:value="${numeroOrden}">
+            <input type="hidden" name="page" value="0">
+
+            <span class="small text-muted">Por página</span>
+            <select class="form-select form-select-sm" name="size" onchange="this.form.submit()">
+                <option value="10" th:selected="${size == 10}">10</option>
+                <option value="20" th:selected="${size == 20}">20</option>
+                <option value="50" th:selected="${size == 50}">50</option>
+                <option value="100" th:selected="${size == 100}">100</option>
+            </select>
+        </form>
+    </div>
+
+    <!-- TABLA -->
+    <div class="card shadow-sm">
+        <div class="card-body p-2">
+
+            <div class="table-wrap">
+                <div class="table-scroll">
+
+                    <table class="table table-hover mb-0 align-middle">
+                        <thead>
+                        <tr>
+                            <th>N° Factura</th>
+                            <th>N° Orden</th>
+                            <th>N° Siniestro</th>
+                            <th>Estado</th>
+                            <th class="aseguradora-col">Aseguradora</th>
+                            <th>Archivo</th>
+                            <th>Fecha factura</th>
+                            <th>Fecha envío</th>
+                            <th class="acciones-col">Acciones</th>
+                            <th sec:authorize="hasRole('ADMIN')">Observaciones</th>
+                        </tr>
+                        </thead>
+
+                        <tbody>
+                        <tr th:each="factura : ${facturas}">
+
+                            <td th:text="${factura.numeroFactura}"></td>
+                            <td th:text="${factura.numeroOrden}"></td>
+                            <td th:text="${factura.numeroSiniestro}"></td>
+
+                            <td>
+                                <span class="badge"
+                                      th:classappend="
+                                      ${factura.estado.name() == 'NUEVA'} ? 'badge-nueva' :
+                                      (${factura.estado.name() == 'PENDIENTE_ASIGNACION'} ? 'badge-pendiente' :
+                                      (${factura.estado.name() == 'CERRADA'} ? 'badge-cerrada' : 'bg-secondary'))"
+                                      th:text="${factura.estado}">
+                                </span>
+                            </td>
+
+                            <!-- ASEGURADORA (muestra nombre o select + botón si pendiente y admin) -->
+                            <td class="aseguradora-col">
+                                <!-- Si ya tiene aseguradora -->
+                                <span th:if="${factura.aseguradora != null}"
+                                      th:text="${factura.aseguradora.nombre}">
+                                </span>
+
+                                <!-- Si NO tiene aseguradora: solo para admin y si está pendiente -->
+                                <div th:if="${factura.aseguradora == null and #authorization.expression('hasRole(''ADMIN'')') and factura.estado.name() == 'PENDIENTE_ASIGNACION'}">
+                                    <form th:action="@{'/facturas/' + ${factura.id} + '/asignar-aseguradora'}"
+                                          method="post"
+                                          class="d-flex gap-2 align-items-center">
+                                        <select class="form-select form-select-sm"
+                                                name="aseguradoraId" required>
+                                            <option value="" selected>Seleccionar...</option>
+                                            <option th:each="aseg : ${aseguradoras}"
+                                                    th:value="${aseg.id}"
+                                                    th:text="${aseg.nombre}">
+                                            </option>
+                                        </select>
+                                        <button class="btn btn-outline-primary btn-sm">
+                                            Asignar
+                                        </button>
+                                    </form>
+                                </div>
+
+                                <!-- Si NO tiene aseguradora pero no corresponde mostrar select -->
+                                <span th:if="${factura.aseguradora == null and !(#authorization.expression('hasRole(''ADMIN'')') and factura.estado.name() == 'PENDIENTE_ASIGNACION')}"
+                                      class="text-muted">
+                                    Sin asignar
+                                </span>
+                            </td>
+
+                            <td>
+                                <a th:if="${factura.nombreArchivo != null}"
+                                   th:href="@{'/archivos/' + ${factura.nombreArchivo}}"
+                                   target="_blank"
+                                   class="btn btn-outline-primary btn-sm">
+                                    Ver PDF
+                                </a>
+                                <span th:if="${factura.nombreArchivo == null}" class="text-muted">-</span>
+                            </td>
+
+                            <td th:text="${factura.fechaFactura != null ? #temporals.format(factura.fechaFactura,'dd/MM/yyyy') : '-'}"></td>
+
+                            <td>
+                                <span th:if="${factura.fechaEnvio != null}"
+                                      th:text="${#temporals.format(factura.fechaEnvio,'dd/MM/yyyy HH:mm')}"></span>
+                                <span th:if="${factura.fechaEnvio == null}" class="text-muted">Pendiente</span>
+                            </td>
+
+                            <!-- ACCIONES -->
+                            <td class="acciones-col">
+                                <div class="dropdown">
+                                    <button class="btn btn-outline-dark btn-sm dropdown-toggle"
+                                            data-bs-toggle="dropdown">
+                                        Acciones
+                                    </button>
+
+                                    <ul class="dropdown-menu dropdown-menu-end p-2" style="min-width: 230px;">
+
+                                        <li th:if="${#authorization.expression('hasRole(''ADMIN'')')}">
+                                            <form class="mb-2"
+                                                  th:action="@{'/facturas/' + ${factura.id} + '/accion'}"
+                                                  method="post">
+                                                <input type="hidden" name="accion" value="enviar">
+                                                <button class="btn btn-primary btn-sm w-100">Enviar</button>
+                                            </form>
+                                        </li>
+
+                                        <li th:if="${#authorization.expression('hasRole(''ADMIN'')')}">
+                                            <form class="mb-2"
+                                                  th:action="@{'/facturas/' + ${factura.id} + '/accion'}"
+                                                  method="post">
+                                                <input type="hidden" name="accion" value="cerrar_manual">
+                                                <button class="btn btn-secondary btn-sm w-100">Cerrar</button>
+                                            </form>
+                                        </li>
+
+                                        <li>
+                                            <a th:href="@{'/facturas/' + ${factura.id} + '/historial'}"
+                                               class="btn btn-outline-dark btn-sm w-100 mb-2">
+                                                Historial
+                                            </a>
+                                        </li>
+
+                                        <li><hr class="dropdown-divider"></li>
+
+                                        <li>
+                                            <form th:action="@{'/facturas/' + ${factura.id} + '/adjunto-extra'}"
+                                                  method="post" enctype="multipart/form-data">
+                                                <input type="file" name="archivoExtra"
+                                                       class="form-control form-control-sm mb-2">
+                                                <button class="btn btn-outline-secondary btn-sm w-100">
+                                                    Subir adjunto
+                                                </button>
+                                            </form>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </td>
+
+                            <!-- OBSERVACIONES -->
+                            <td sec:authorize="hasRole('ADMIN')" class="observaciones-cell">
+                                <form th:action="@{'/facturas/' + ${factura.id} + '/observaciones'}"
+                                      method="post" class="d-flex gap-2 align-items-start">
+                                    <textarea class="form-control form-control-sm"
+                                              name="observaciones"
+                                              rows="2"
+                                              th:text="${factura.observacionesAdmin}"></textarea>
+                                    <button class="btn btn-outline-primary btn-sm">Guardar</button>
+                                </form>
+                            </td>
+
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- PAGINACIÓN -->
+            <nav th:if="${facturasPage != null and facturasPage.totalPages > 1}" class="mt-2">
+                <ul class="pagination pagination-sm justify-content-end mb-0">
+
+                    <li class="page-item" th:classappend="${facturasPage.first} ? 'disabled'">
+                        <a class="page-link"
+                           th:href="@{/facturas(page=0,size=${facturasPage.size},
+                           estado=${estadoSeleccionado},
+                           aseguradoraId=${aseguradoraSeleccionada},
+                           soloVencidas=${soloVencidas},
+                           numeroFactura=${numeroFactura},
+                           numeroSiniestro=${numeroSiniestro},
+                           numeroOrden=${numeroOrden})}">««</a>
+                    </li>
+
+                    <li class="page-item" th:classappend="${facturasPage.first} ? 'disabled'">
+                        <a class="page-link"
+                           th:href="@{/facturas(page=${facturasPage.number - 1},size=${facturasPage.size},
+                           estado=${estadoSeleccionado},
+                           aseguradoraId=${aseguradoraSeleccionada},
+                           soloVencidas=${soloVencidas},
+                           numeroFactura=${numeroFactura},
+                           numeroSiniestro=${numeroSiniestro},
+                           numeroOrden=${numeroOrden})}">«</a>
+                    </li>
+
+                    <li class="page-item"
+                        th:each="i : ${#numbers.sequence(
+                        T(java.lang.Math).max(0, facturasPage.number - 2),
+                        T(java.lang.Math).min(facturasPage.totalPages - 1, facturasPage.number + 2))}"
+                        th:classappend="${i == facturasPage.number} ? 'active'">
+                        <a class="page-link"
+                           th:text="${i + 1}"
+                           th:href="@{/facturas(page=${i},size=${facturasPage.size},
+                           estado=${estadoSeleccionado},
+                           aseguradoraId=${aseguradoraSeleccionada},
+                           soloVencidas=${soloVencidas},
+                           numeroFactura=${numeroFactura},
+                           numeroSiniestro=${numeroSiniestro},
+                           numeroOrden=${numeroOrden})}"></a>
+                    </li>
+
+                    <li class="page-item" th:classappend="${facturasPage.last} ? 'disabled'">
+                        <a class="page-link"
+                           th:href="@{/facturas(page=${facturasPage.number + 1},size=${facturasPage.size},
+                           estado=${estadoSeleccionado},
+                           aseguradoraId=${aseguradoraSeleccionada},
+                           soloVencidas=${soloVencidas},
+                           numeroFactura=${numeroFactura},
+                           numeroSiniestro=${numeroSiniestro},
+                           numeroOrden=${numeroOrden})}">»</a>
+                    </li>
+
+                    <li class="page-item" th:classappend="${facturasPage.last} ? 'disabled'">
+                        <a class="page-link"
+                           th:href="@{/facturas(page=${facturasPage.totalPages - 1},size=${facturasPage.size},
+                           estado=${estadoSeleccionado},
+                           aseguradoraId=${aseguradoraSeleccionada},
+                           soloVencidas=${soloVencidas},
+                           numeroFactura=${numeroFactura},
+                           numeroSiniestro=${numeroSiniestro},
+                           numeroOrden=${numeroOrden})}">»»</a>
+                    </li>
+
+                </ul>
+            </nav>
+
+        </div>
+    </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

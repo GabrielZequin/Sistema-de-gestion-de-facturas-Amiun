@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="es"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="https://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Mi cuenta</title>
+
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+
+    <style>
+        :root{
+            --bg:#f6f7fb;
+            --surface:#fff;
+            --text:#0f172a;
+            --muted:#64748b;
+            --border:#e6eaf2;
+            --brand:#0f172a;
+            --shadow:0 10px 30px rgba(0,0,0,.08);
+            --radius:16px;
+            --radius-sm:12px;
+        }
+
+        body{ background:var(--bg) !important; color:var(--text); }
+
+        .page-wrap{ padding-bottom: 24px; }
+        .page-title{ font-weight:700; letter-spacing:-.02em; }
+        .page-subtitle{ color:var(--muted); font-size:13px; }
+
+        .card-soft{
+            border:0;
+            border-radius:var(--radius);
+            background:var(--surface);
+            box-shadow:var(--shadow);
+        }
+
+        .card-head{
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            gap:12px;
+            padding:14px 16px;
+            border-bottom:1px solid var(--border);
+        }
+        .card-hint{ font-size:12px; color:var(--muted); }
+
+        .alert{ border-radius:14px; }
+        .form-label{ font-size:12.5px; margin-bottom:.25rem; color:#334155; }
+        .form-control{
+            border-radius:var(--radius-sm);
+            height: 40px;
+            font-size: 13px;
+        }
+        .btn{ border-radius:var(--radius-sm); }
+        .btn-primary{ font-weight:600; }
+
+        .form-help{
+            font-size: 12px;
+            color: var(--muted);
+            margin-top: .25rem;
+        }
+
+        .w-520{ max-width: 520px; }
+
+        /* Botón show/hide en input-group */
+        .toggle-btn{
+            border-top-right-radius: var(--radius-sm);
+            border-bottom-right-radius: var(--radius-sm);
+            font-size: 12px;
+        }
+    </style>
+</head>
+
+<body class="bg-light">
+
+<div th:replace="fragments/navbar :: navbar"></div>
+
+<div class="container page-wrap">
+
+    <!-- Encabezado -->
+    <div class="d-flex flex-wrap align-items-end justify-content-between gap-2 mb-3">
+        <div>
+            <div class="h4 page-title mb-0">Mi cuenta</div>
+            <div class="page-subtitle">Actualizá tu contraseña de acceso</div>
+        </div>
+    </div>
+
+    <!-- MENSAJES -->
+    <div th:if="${mensaje}" class="alert alert-success alert-dismissible fade show py-2">
+        <span th:text="${mensaje}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+
+    <div th:if="${error}" class="alert alert-danger alert-dismissible fade show py-2">
+        <span th:text="${error}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+
+    <div class="card card-soft">
+        <div class="card-head">
+            <div>
+                <div class="fw-semibold">Cambiar contraseña</div>
+                <div class="card-hint">Por seguridad, usá una contraseña que no compartas con otros sistemas</div>
+            </div>
+            <div class="card-hint">
+                Usuario: <b th:text="${usuarioActual != null ? usuarioActual.username : ''}"></b>
+            </div>
+        </div>
+
+        <div class="card-body">
+            <div class="w-520">
+
+                <form th:action="@{/mi-cuenta/cambiar-password}" method="post" class="vstack gap-3">
+
+                    <!-- Actual -->
+                    <div>
+                        <label class="form-label">Contraseña actual</label>
+                        <div class="input-group">
+                            <input id="passActual" type="password" name="passwordActual"
+                                   class="form-control" required>
+                            <button class="btn btn-outline-secondary toggle-btn" type="button"
+                                    onclick="togglePass('passActual', this)">
+                                Mostrar
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Nueva -->
+                    <div>
+                        <label class="form-label">Nueva contraseña</label>
+                        <div class="input-group">
+                            <input id="passNueva" type="password" name="passwordNueva"
+                                   class="form-control" required minlength="4">
+                            <button class="btn btn-outline-secondary toggle-btn" type="button"
+                                    onclick="togglePass('passNueva', this)">
+                                Mostrar
+                            </button>
+                        </div>
+                        <div class="form-help">Mínimo 4 caracteres.</div>
+                    </div>
+
+                    <!-- Confirmación -->
+                    <div>
+                        <label class="form-label">Confirmar nueva contraseña</label>
+                        <div class="input-group">
+                            <input id="passConfirmar" type="password" name="passwordConfirmar"
+                                   class="form-control" required minlength="4">
+                            <button class="btn btn-outline-secondary toggle-btn" type="button"
+                                    onclick="togglePass('passConfirmar', this)">
+                                Mostrar
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2 pt-1">
+                        <button class="btn btn-primary" type="submit">
+                            Guardar nueva contraseña
+                        </button>
+                        <a class="btn btn-outline-dark" th:href="@{/facturas}">
+                            Volver
+                        </a>
+                    </div>
+
+                </form>
+
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    function togglePass(id, btn){
+        const input = document.getElementById(id);
+        if(!input) return;
+        const showing = input.type === 'text';
+        input.type = showing ? 'password' : 'text';
+        btn.textContent = showing ? 'Mostrar' : 'Ocultar';
+    }
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
