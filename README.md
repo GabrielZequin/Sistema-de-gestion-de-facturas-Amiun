@@ -33,7 +33,12 @@ Incluye una interfaz web que permite visualizar, filtrar y administrar facturas,
 - Gestión de usuarios y roles (ADMIN / PDV)  
 - Interfaz web responsive
 
+## ▶️ Ejecución en desarrollo
 
+1. Clonar el repositorio
+2. Crear una base MySQL llamada `seguros_db`
+3. Copiar `.env.example` a `.env` y completar si es necesario
+4. Ejecutar:
 
 
 
