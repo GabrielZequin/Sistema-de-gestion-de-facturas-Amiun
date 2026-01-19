@@ -1,3 +1,8 @@
+![Java](https://img.shields.io/badge/Java-17-red)
+![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3-green)
+![MySQL](https://img.shields.io/badge/MySQL-8-blue)
+![Maven](https://img.shields.io/badge/Maven-3.9-orange)
+
 # Sistema de Gestión de Facturas – Amiun
 
 Sistema web desarrollado para **automatizar la lectura, extracción y gestión de facturas de siniestros** de aseguradoras en la empresa Amiun (agencia de seguros).
